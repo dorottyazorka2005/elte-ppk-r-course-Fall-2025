@@ -1,6 +1,6 @@
 ---
 title: 'Assignment 2: Data visualization'
-author: "Tamas Nagy"
+author: "Dorottya Csala"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -20,6 +20,33 @@ You will have to create 3 plots based on the datasets and instructions detailed 
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(tidytuesdayR)
+library(readr)
+library(ggplot2)
+
+expeditions <- read_csv("expeditions.csv")
+
+head(expeditions)
+colnames(expeditions)
+
+expeditions_peaks <- expeditions %>%
+  mutate(most_peaks= fct_lump(peak_name, n= 15)) %>%
+  filter(most_peaks != "Other") %>%
+  count(most_peaks, season) %>%
+  group_by(most_peaks) %>%
+  mutate(total = sum(n)) %>%
+  ungroup() %>%
+  mutate(most_peaks= fct_reorder(most_peaks, total, .desc= FALSE))
+  
+print(expeditions_peaks)
+
+
+ggplot(expeditions_peaks, aes(x= n, y= most_peaks)) + geom_col(aes(fill=season))  + labs(
+  title= "The 15 most popular peaks stacked by season of expedition",
+  y= "Number of expeditions", fill="Season") + scale_fill_viridis_d(option="D") + theme_light() + theme(legend.position="bottom")
+
+
+
+
 ```
 
 ## Task 1: Climbing expeditions
