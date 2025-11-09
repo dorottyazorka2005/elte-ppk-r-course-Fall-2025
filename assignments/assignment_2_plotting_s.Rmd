@@ -84,7 +84,37 @@ Notes:
 -   To make the x axis breaks pretty, use `scales::pretty_breaks()`, to make the y axis labels comma formatted, use `scales::comma_format()`.
 -   The line size is 1.2, the colors are from the brewer "Dark2" palette. The theme is set to minimal.
 
-```{r}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(scales)
+
+commute <- read.csv("commute.csv")
+commutes_by_state <- commute %>%
+  group_by(state, mode, state_region, state_abb) %>%
+  summarise(n = sum(n, na.rm = TRUE)) %>%
+  ungroup() 
+commutes_wide <- commutes_by_state %>%
+  pivot_wider(names_from = mode,
+              values_from = n,
+              values_fill = 0) %>%
+  rename(bike = `Bike`, walk = `Walk`) 
+colnames(commutes_wide)
+
+ggplot(commutes_wide, aes(x = walk, y = bike, colour = state_region, label= state_abb)) + 
+  geom_point(size = 2) +   geom_text(hjust = 0.5, size = 5, color= "black") +
+  scale_x_log10(labels = comma_format()) +
+  scale_y_log10(labels = comma_format()) +
+  labs(
+    title = "Title number of people walking vs. biking to work in each USA state",
+    x = "Number of ppl walking to work (log N)",
+    y = "Number of ppl biking to work (log N)", color= "State region"
+  ) +
+  theme_light()
+
 
 ```
 
