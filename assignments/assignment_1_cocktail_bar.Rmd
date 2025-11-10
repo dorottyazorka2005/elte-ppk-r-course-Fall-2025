@@ -20,6 +20,7 @@ library(tidyverse)
 library(dplyr)
 library(stringr)
 library(readr)
+library(tidyr)
 ```
 
 # Background
@@ -121,13 +122,15 @@ Count all cocktails with only one ingredient, and
 rare_ingredients <- cleaned_table %>%
   group_by(ingredients) %>%
   summarise(num_cocktails= n_distinct(name)) %>%
-  filter(num_cocktails == 1)
+  filter(num_cocktails == 1) %>%
+  pull(ingredients)
 
-num_rare_ingredients <- nrow(rare_ingredients)
+
+num_rare_ingredients <- length(rare_ingredients)
 
 print(num_rare_ingredients)
 
-rare_name <- rare_ingredients$ingredients
+rare_name <- rare_ingredients
 
 print(rare_name)
 ```
@@ -135,12 +138,28 @@ print(rare_name)
 ## 8. Which cocktail has an ingredient that is only used in one cocktail?
 
 ```{r}
+one_cocktail <- cleaned_table %>%
+  group_by(ingredients) %>%
+  mutate(num_cocktails = n_distinct(name)) %>%
+  ungroup() %>%
+  filter(num_cocktails == 1) %>%
+  distinct(name) 
 
+print(one_cocktail, n= 24)
+  
 ```
 
 ## 9. What are the cocktails without rare ingredients?
 
 ```{r}
+common_cocktails <- cleaned_table %>%
+  group_by(name) %>%
+  summarise(has_rare = any(ingredients %in% rare_ingredients)) %>%  
+  filter(!has_rare) %>%                                          
+  select(name)
+
+print(common_cocktails, n= 31)
+
   
 ```
 
@@ -157,7 +176,21 @@ tribble(~name, ~Lime, ~`White rum`, ~`Cane sugar`, ~`Coca-cola`, ~Mint, ~Soda,
 ```
 
 ```{r}
+cheat_sheet <- cleaned_table %>%
+  distinct(name, ingredients) %>%                  
+  mutate(
+    name = str_trim(name),
+    ingredients = str_trim(str_to_title(ingredients)),  
+    present = "X"
+  ) %>%
+  pivot_wider(
+    names_from = ingredients,
+    values_from = present,
+    values_fill = ""                                  
+  ) %>%
+  relocate(name, sort(names(.)[-1]))
 
+print(cheat_sheet, n= 55)
 ```
 
 
