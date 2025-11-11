@@ -1,11 +1,16 @@
 ---
 title: "Assignment 3: Model comparison"
-author: "Marton Kovacs"
+author: "Dorottya Csala"
 output: html_document
 editor_options: 
   chunk_output_type: console
 ---
-
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+```
 In this lab assignment you are going to work with (simulated) data related to perioperative pain and its psychological and hormonal predictors. In the assignment you will assess the added benefit of including some psychological and hormonal predictors to the already established demographic predictors of pain.
 
 In this assignment you will set up a hierarchical regression model to predict postoperative pain after wisdom tooth surgery. 
@@ -59,7 +64,8 @@ In your discussion of the findings, briefly interpret the results of the above a
 Read the dataset used in this assignment. Pay attention to the extension of the datafile.
 
 ```{r}
-
+pain <- read_excel("assignment_3_dataset.xlsx")
+print(pain)
 ```
 
 ## Data and model diagnostics 
@@ -69,7 +75,45 @@ Read the dataset used in this assignment. Pay attention to the extension of the 
 Run an exploratory data analysis (EDA) to investigate the dataset.
 
 ```{r}
+str(pain) #Get the structure of variables
 
+pain %>% 
+  summarise(across(everything(), ~ sum(is.na(.)))) #There are no missing values
+
+pain %>%                                            #Summary statistics for numeric variables
+  reframe(across(where(is.numeric), ~ c(
+    mean = mean(.x, na.rm = TRUE),
+    sd = sd(.x, na.rm = TRUE),
+    min = min(.x, na.rm = TRUE),
+    max = max(.x, na.rm = TRUE),
+    median = median(.x, na.rm = TRUE)
+  )))
+
+ggplot(pain, aes(age)) + geom_histogram() #Checking for distribution and outliers
+ggplot(pain, aes(sex)) + geom_bar() #There is answer "woman" instead of "female"
+ggplot(pain, aes(STAI_trait)) + geom_histogram() 
+ggplot(pain, aes(pain_cat)) + geom_histogram() 
+ggplot(pain, aes(mindfulness)) + geom_histogram() 
+ggplot(pain, aes(cortisol_serum)) + geom_histogram() 
+ggplot(pain, aes(cortisol_saliva)) + geom_histogram() #My creative solution:)))
+
+ggplot(pain, aes(x = age, y = pain)) +                         #Checking the relationship between variables
+  geom_smooth(method = "lm", se = FALSE, color = "red")
+ggplot(pain, aes(x = sex, y = pain, fill = sex)) +
+  geom_boxplot() + ylim(0, 20)
+
+pain %>%                                           #Group statistics
+  group_by(sex) %>%
+  summarise(
+    mean_pain = mean(pain, na.rm = TRUE),
+    sd_pain = sd(pain, na.rm = TRUE),
+    n = n()
+  )
+
+numeric_var <- pain %>% select(where(is.numeric))
+
+cor_matrix <- cor(numeric_var, use="pairwise.complete.obs")     #Correlation
+cor_matrix
 ```
 
 #### Correct coding errors
