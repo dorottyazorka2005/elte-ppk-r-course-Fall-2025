@@ -11,6 +11,8 @@ library(tidyverse)
 library(ggplot2)
 library(readxl)
 library(car)
+library(broom)
+library(parameters)
 ```
 In this lab assignment you are going to work with (simulated) data related to perioperative pain and its psychological and hormonal predictors. In the assignment you will assess the added benefit of including some psychological and hormonal predictors to the already established demographic predictors of pain.
 
@@ -208,13 +210,33 @@ vif(complex_model) #Too big VIF for cortisol values
 If based on the assumption tests you decide to drop a predictor variable you should do that here. Create your updated model.
 
 ```{r}
+#I will only keep the variable cortisol_serum, because it is said that it is more correlated with pain compared to cortisol_salive and both have high VIF values
 
+modified_df <- df %>%
+  select(-cortisol_saliva) %>%
+  mutate(sex= dplyr::recode(sex, "woman"="female")) %>%
+  mutate(sex=factor(sex))
+
+print(modified_df)
+
+modified_complex_model <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum, data= modified_df)
 ```
 
 #### Checking outliers of the updated model
 
 ```{r}
+modified_outliers <- modified_df %>%
+  mutate(cooksd=cooks.distance(modified_complex_model),
+         influential=cooksd > (4/nrow(modified_df))) 
+  
+glimpse(modified_outliers)
 
+modified_outliers_shown <- modified_outliers %>%
+  filter(influential== TRUE & cooksd > (4/nrow(modified_df)))
+
+glimpse(modified_outliers_shown)
+
+plot(modified_complex_model, which= 4)
 ```
 
 #### Checking assumptions of the updated model
@@ -222,25 +244,32 @@ If based on the assumption tests you decide to drop a predictor variable you sho
 Normality assumption
 
 ```{r}
+modified_residuals <- residuals(modified_complex_model)
 
+residuals
+
+qqnorm(modified_residuals)
+qqline(modified_residuals, col= "red")
+
+plot(modified_complex_model, which= 2)
 ```
 
 Linearity assumption
 
 ```{r}
-
+plot(modified_complex_model, which= 1)
 ```
 
 Homoscedasticty assumption (homogeneity of variance)
 
 ```{r}
-
+plot(modified_complex_model, which= 3)
 ```
 
 Multicollinearity assumption
 
 ```{r}
-
+vif(modified_complex_model)
 ```
 
 ## Model comparison
@@ -248,13 +277,24 @@ Multicollinearity assumption
 Create the simple model and get the results of the model that needs to be reported based on the What to report section.
 
 ```{r}
+simple_model <- lm(pain ~ age + sex, data= df_corrected)
 
+head(simple_model)
+summary(simple_model) #Reporting model test staistics
+tidy(simple_model, conf.int= TRUE) #Unstandardized regression coefficients and Cl
+model_parameters(simple_model, standardize = "refit") #Standardized regression coefficients and Cl
 ```
 
 Create the more complex model based on the results of the model diagnostics. Also, get the results that needs to be reported based on the What to report section.
 
 ```{r}
+modified_complex_model <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum, data= modified_df)
 
+summary(modified_complex_model)
+tidy(modified_complex_model, conf.int = TRUE)
+model_parameters(modified_complex_model, standardize= "refit")
+
+y= -0.617 + (-0.0257)*X1 + (-0.0817)*X2 + 0.0199*X3 + 0.0707*X4 + 0.0373*X5 + 0.783*X6
 ```
 
 Compare the two models.
