@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(ggplot2)
 library(readxl)
+library(car)
 ```
 In this lab assignment you are going to work with (simulated) data related to perioperative pain and its psychological and hormonal predictors. In the assignment you will assess the added benefit of including some psychological and hormonal predictors to the already established demographic predictors of pain.
 
@@ -64,8 +65,8 @@ In your discussion of the findings, briefly interpret the results of the above a
 Read the dataset used in this assignment. Pay attention to the extension of the datafile.
 
 ```{r}
-pain <- read_excel("assignment_3_dataset.xlsx")
-print(pain)
+df <- read_excel("assignment_3_dataset.xlsx")
+print(df)
 ```
 
 ## Data and model diagnostics 
@@ -75,12 +76,12 @@ print(pain)
 Run an exploratory data analysis (EDA) to investigate the dataset.
 
 ```{r}
-str(pain) #Get the structure of variables
+str(df) #Get the structure of variables
 
-pain %>% 
+df %>% 
   summarise(across(everything(), ~ sum(is.na(.)))) #There are no missing values
 
-pain %>%                                            #Summary statistics for numeric variables
+df %>%                                            #Summary statistics for numeric variables
   reframe(across(where(is.numeric), ~ c(
     mean = mean(.x, na.rm = TRUE),
     sd = sd(.x, na.rm = TRUE),
@@ -89,20 +90,21 @@ pain %>%                                            #Summary statistics for nume
     median = median(.x, na.rm = TRUE)
   )))
 
-ggplot(pain, aes(age)) + geom_histogram() #Checking for distribution and outliers
-ggplot(pain, aes(sex)) + geom_bar() #There is answer "woman" instead of "female"
-ggplot(pain, aes(STAI_trait)) + geom_histogram() 
-ggplot(pain, aes(pain_cat)) + geom_histogram() 
-ggplot(pain, aes(mindfulness)) + geom_histogram() 
-ggplot(pain, aes(cortisol_serum)) + geom_histogram() 
-ggplot(pain, aes(cortisol_saliva)) + geom_histogram() #My creative solution:)))
+ggplot(df, aes(age)) + geom_histogram() #Checking for distribution and outliers
+ggplot(df, aes(sex)) + geom_bar() #There is answer "woman" instead of "female"
+ggplot(df, aes(STAI_trait)) + geom_histogram() 
+ggplot(df, aes(pain_cat)) + geom_histogram() 
+ggplot(df, aes(mindfulness)) + geom_histogram() 
+ggplot(df, aes(cortisol_serum)) + geom_histogram() 
+ggplot(df, aes(cortisol_saliva)) + geom_histogram() #My creative solution:)))
 
-ggplot(pain, aes(x = age, y = pain)) +                         #Checking the relationship between variables
+
+ggplot(df, aes(x = age, y = pain)) +                         #Checking the relationship between variables
   geom_smooth(method = "lm", se = FALSE, color = "red")
-ggplot(pain, aes(x = sex, y = pain, fill = sex)) +
+ggplot(df, aes(x = sex, y = pain, fill = sex)) +
   geom_boxplot() + ylim(0, 20)
 
-pain %>%                                           #Group statistics
+df %>%                                           #Group statistics
   group_by(sex) %>%
   summarise(
     mean_pain = mean(pain, na.rm = TRUE),
@@ -110,7 +112,7 @@ pain %>%                                           #Group statistics
     n = n()
   )
 
-numeric_var <- pain %>% select(where(is.numeric))
+numeric_var <- df %>% select(where(is.numeric))
 
 cor_matrix <- cor(numeric_var, use="pairwise.complete.obs")     #Correlation
 cor_matrix
@@ -121,7 +123,13 @@ cor_matrix
 If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
 
 ```{r}
+df_corrected <- df %>% 
+  mutate(sex= dplyr::recode(sex, "woman" = "female")) %>%
+  mutate(sex= factor(sex))
 
+ggplot(df_corrected, aes(sex)) + geom_bar()
+df_corrected$sex <- as.numeric(df_corrected$sex) - 1
+str(df_corrected)
 ```
 
 ### Model diagnostics
@@ -130,7 +138,9 @@ If you find values in the dataset during the EDA, that are not correct based on 
 In order to test the more complex model for outliers and to test the assumptions first build the model.
 
 ```{r}
+complex_model <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, data= df_corrected)
 
+head(complex_model)
 ```
 
 #### Checking for influential outliers
@@ -138,7 +148,18 @@ In order to test the more complex model for outliers and to test the assumptions
 Check for outlier values in the model.
 
 ```{r}
+outliers <- df_corrected %>%
+  mutate(cooksd=cooks.distance(complex_model),
+         influential=cooksd > (4/nrow(df_corrected))) 
+  
+glimpse(outliers)
 
+outliers_shown <- outliers %>%
+  filter(influential== TRUE & cooksd > (4/nrow(df_corrected)))
+
+glimpse(outliers_shown)
+
+plot(complex_model, which= 4)
 ```
 
 #### Checking assumptions
@@ -146,19 +167,28 @@ Check for outlier values in the model.
 Check the normality assumption.
 
 ```{r}
+residuals <- residuals(complex_model)
+
+residuals
+
+qqnorm(residuals)
+qqline(residuals, col= "red")
+
+plot(complex_model, which= 2)
 
 ```
 
 Check the linearity assumption.
 
 ```{r}
+plot(complex_model, which= 1)
 
 ```
 
 Check the homoscedasticty assumption (homogeneity of variance).
 
 ```{r}
-
+plot(complex_model, which= 3)
 ```
 
 Check the multicollinearity assumption.
@@ -170,7 +200,7 @@ https://statisticalhorizons.com/multicollinearity
 http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity-in-regression-analysis
 
 ```{r}
-
+vif(complex_model) #Too big VIF for cortisol values
 ```
 
 ### Making decision based on model diagnostics
