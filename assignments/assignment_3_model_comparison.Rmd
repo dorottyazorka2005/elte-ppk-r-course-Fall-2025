@@ -300,6 +300,27 @@ y= -0.617 + (-0.0257)*X1 + (-0.0817)*X2 + 0.0199*X3 + 0.0707*X4 + 0.0373*X5 + 0.
 Compare the two models.
 
 ```{r}
+anova(simple_model, modified_complex_model)
 
+summary(simple_model)$r.squared            #Checking R2
+summary(modified_complex_model)$r.squared
+
+deltaR2_12 <- summary(modified_complex_model)$r.squared - summary(simple_model)$r.squared   #Checking the change in R2
+deltaR2_12
+
+AIC(simple_model, modified_complex_model)      #Checking AIC and BIC values
+
+summary(simple_model)$adj.r.squared                 #Checking adjusted R2
+summary(modified_complex_model)$adj.r.squared
+
+n <- length(resid(modified_complex_model))   
+rss0 <- sum(resid(simple_model)^2)
+rss1 <- sum(resid(modified_complex_model)^2)
+d <- df.residual(simple_model) - df.residual(modified_complex_model)
+
+LRstat <- n * (log(rss0) - log(rss1))
+pvalue_LR <- pchisq(LRstat, df = d, lower.tail = FALSE)
+
+LRstat; pvalue_LR
 ```
-
+A hierarchical regression was conducted to examine predictors of pain. In the simpler model, demographic predictors (age and sex) accounted for 1.6% of the variance in pain (R² = .016). Adding psychological and hormonal predictors (STAI_trait, pain_cat, mindfulness, and cortisol_serum) to the model, the final model accounted for 7.5% of the variance (F(4, 153) = 2.46, p = .048, R² = .075). The AIC value was lower for the more complex model (AIC = 889.99), indicating a better fit. A likelihood ratio test also showed that adding these predictors significantly improved the prediction of pain (χ²(4) = 9.96, p = .041).
