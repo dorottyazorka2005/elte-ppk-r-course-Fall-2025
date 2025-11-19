@@ -42,7 +42,7 @@ print(expeditions_peaks)
 
 ggplot(expeditions_peaks, aes(x= n, y= most_peaks)) + geom_col(aes(fill=season))  + labs(
   title= "The 15 most popular peaks stacked by season of expedition",
-  y= "Number of expeditions", fill="Season") + scale_fill_viridis_d(option="D") + theme_light() + theme(legend.position="bottom")
+  x= "Number of expeditions", y= "", fill="Season") + scale_fill_viridis_d(option="D") + theme_light() + theme(legend.position="bottom")
 
 
 
@@ -71,7 +71,7 @@ broad_field_phds <- aggregate(n_phds ~ year + broad_field,data= phd_by_field, FU
   
 print(broad_field_phds)
 
-ggplot(broad_field_phds, aes(x= year, y= n_phds, color= broad_field)) + geom_line(linewidth= 1.2) + scale_x_continuous(breaks= pretty_breaks(n= 5)) + labs(title= "Number of awarded Ph.D.-s in the US by year", color= "Broad field") + scale_color_brewer(palette="Dark2") + theme_minimal()
+ggplot(broad_field_phds, aes(x= year, y= n_phds, color= broad_field)) + geom_line(linewidth= 1.2) + scale_x_continuous(breaks= pretty_breaks(n= 5)) + scale_y_continuous(labels= comma_format())+ labs(title= "Number of awarded Ph.D.-s in the US by year", x= "", y= "", color= "Broad field") + scale_color_brewer(palette="Dark2") + theme_minimal()
 ```
 
 ## Task 2: PhDs awarded
@@ -104,8 +104,10 @@ commutes_wide <- commutes_by_state %>%
   rename(bike = `Bike`, walk = `Walk`) 
 colnames(commutes_wide)
 
+states_labels <- c("WY", "VT", "ND", "AK", "DE", "NH", "ME", "MT", "ID", "RI", "NE", "KS", "LA", "IA", "CT", "UT", "IN", "MI", "MN", "AZ", "OR", "FL", "WA", "MA", "IL", "OH", "NJ", "OA", "NY", "CA")
+
 ggplot(commutes_wide, aes(x = walk, y = bike, colour = state_region, label= state_abb)) + 
-  geom_point(size = 2) +   geom_text(hjust = 0.5, size = 5, color= "black") +
+  geom_point(size = 2) +   geom_text(data= subset(commutes_wide, state_abb %in% states_labels), hjust = 0.5, size = 5, color= "black") +
   scale_x_log10(labels = comma_format()) +
   scale_y_log10(labels = comma_format()) +
   labs(
