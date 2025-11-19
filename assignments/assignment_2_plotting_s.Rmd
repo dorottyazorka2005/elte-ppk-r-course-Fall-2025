@@ -19,7 +19,6 @@ You will have to create 3 plots based on the datasets and instructions detailed 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
-library(tidytuesdayR)
 library(readr)
 library(ggplot2)
 
@@ -87,7 +86,6 @@ Notes:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
-library(dplyr)
 library(readr)
 library(ggplot2)
 library(scales)
