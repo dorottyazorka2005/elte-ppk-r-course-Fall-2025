@@ -96,7 +96,7 @@ frequent_ingredients <- cleaned_table %>%
 
 print(frequent_ingredients)
 
-# The top 10 ingridients used in cocktails: lemon juice and simple syrup (14), gin and sweet vermouth (13), lime juice and Angostura bitters (12), saline solution and water (10), rye (8), Cognac and Luxardo Maraschino (6)
+# The top 10 ingridients used in cocktails: lemon juice (15), simple syrup (14), gin and sweet vermouth (13), lime juice and Angostura bitters (12), saline solution and water (10), rye (8), Cognac and Luxardo Maraschino (6)
 ```
 
 ## 6. Which cocktail(s) has/have the most ingredients?
