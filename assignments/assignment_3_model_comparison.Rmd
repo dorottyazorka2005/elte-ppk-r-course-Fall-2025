@@ -95,18 +95,18 @@ df %>%                                            #Summary statistics for numeri
 ggplot(df, aes(age)) + geom_histogram() #Checking for distribution and outliers
 ggplot(df, aes(sex)) + geom_bar() #There is answer "woman" instead of "female"
 ggplot(df, aes(STAI_trait)) + geom_histogram() 
-ggplot(df, aes(pain_cat)) + geom_histogram() 
+ggplot(df, aes(pain_cat)) + geom_histogram()  
 ggplot(df, aes(mindfulness)) + geom_histogram() 
 ggplot(df, aes(cortisol_serum)) + geom_histogram() 
-ggplot(df, aes(cortisol_saliva)) + geom_histogram() #My creative solution:)))
+ggplot(df, aes(cortisol_saliva)) + geom_histogram() 
 
-
-ggplot(df, aes(x = age, y = pain)) +                         #Checking the relationship between variables
+#Checking the relationship between variables: negative correlation between age and pain
+ggplot(df, aes(x = age, y = pain)) +                         
   geom_smooth(method = "lm", se = FALSE, color = "red")
 ggplot(df, aes(x = sex, y = pain, fill = sex)) +
   geom_boxplot() + ylim(0, 20)
 
-df %>%                                           #Group statistics
+df %>%                                           #Group statistics --> I need to recode the sex variable
   group_by(sex) %>%
   summarise(
     mean_pain = mean(pain, na.rm = TRUE),
@@ -116,7 +116,7 @@ df %>%                                           #Group statistics
 
 numeric_var <- df %>% select(where(is.numeric))
 
-cor_matrix <- cor(numeric_var, use="pairwise.complete.obs")     #Correlation
+cor_matrix <- cor(numeric_var, use="pairwise.complete.obs")     #Correlation --> highly correlated variables are cortisol_serum and cortisol_saliva
 cor_matrix
 ```
 
@@ -161,7 +161,9 @@ outliers_shown <- outliers %>%
 
 glimpse(outliers_shown)
 
-plot(complex_model, which= 4)
+plot(complex_model, which= 4)   # Cook's distance
+
+# The value of Cook's distance is too high; pain has a value of 50 even though it should range from 0 to 10
 ```
 
 #### Checking assumptions
@@ -176,21 +178,25 @@ residuals
 qqnorm(residuals)
 qqline(residuals, col= "red")
 
-plot(complex_model, which= 2)
+plot(complex_model, which= 2)   # Normality of residuals
 
+# It does not show normality because of ID_142, who has the pain value of 50.
 ```
 
 Check the linearity assumption.
 
 ```{r}
-plot(complex_model, which= 1)
+plot(complex_model, which= 1)   # Linearity and homoscedasticity
 
+# Linearity is not met because of ID_142
 ```
 
 Check the homoscedasticty assumption (homogeneity of variance).
 
 ```{r}
-plot(complex_model, which= 3)
+plot(complex_model, which= 3) # Homoscedasticity check
+
+# Homoscedasticity is not met because of ID_142
 ```
 
 Check the multicollinearity assumption.
@@ -210,12 +216,14 @@ vif(complex_model) #Too big VIF for cortisol values
 If based on the assumption tests you decide to drop a predictor variable you should do that here. Create your updated model.
 
 ```{r}
-#I will only keep the variable cortisol_serum, because it is said that it is more correlated with pain compared to cortisol_salive and both have high VIF values
+#I will only keep the variable cortisol_serum, because it is stated that cortisol_serum is more correlated with pain compared to cortisol_salive and both cortisol values have high VIF values indicating multicollinearity. Besides, I will exclude ID_142 because it has an outlier value (pain value of 50).
 
 modified_df <- df %>%
+  filter(ID != "ID_142") %>%
   select(-cortisol_saliva) %>%
   mutate(sex= dplyr::recode(sex, "woman"="female")) %>%
-  mutate(sex=factor(sex))
+  mutate(sex=factor(sex), 
+         sex_numeric = ifelse(sex == "male", 1, 0))
 
 print(modified_df)
 
@@ -236,7 +244,9 @@ modified_outliers_shown <- modified_outliers %>%
 
 glimpse(modified_outliers_shown)
 
-plot(modified_complex_model, which= 4)
+plot(modified_complex_model, which= 4)    # Cook's distance
+
+# There is no influential outliers
 ```
 
 #### Checking assumptions of the updated model
@@ -251,25 +261,29 @@ residuals
 qqnorm(modified_residuals)
 qqline(modified_residuals, col= "red")
 
-plot(modified_complex_model, which= 2)
+plot(modified_complex_model, which= 2)   # Normality of residuals
+
+# The new model meets the assumption of normality.
 ```
 
 Linearity assumption
 
 ```{r}
-plot(modified_complex_model, which= 1)
+plot(modified_complex_model, which= 1)    # Linearity and homoscedasticity
+# The new model meets the assumption of linearity.
 ```
 
 Homoscedasticty assumption (homogeneity of variance)
 
 ```{r}
-plot(modified_complex_model, which= 3)
+plot(modified_complex_model, which= 3)    # Homoscedasticity check
+# The new model meets the assumption of homoscedasticity.
 ```
 
 Multicollinearity assumption
 
 ```{r}
-vif(modified_complex_model)
+vif(modified_complex_model)   # All values are good
 ```
 
 ## Model comparison
@@ -277,12 +291,14 @@ vif(modified_complex_model)
 Create the simple model and get the results of the model that needs to be reported based on the What to report section.
 
 ```{r}
-simple_model <- lm(pain ~ age + sex, data= df_corrected)
+simple_model <- lm(pain ~ age + sex, data= modified_df)
 
 head(simple_model)
 summary(simple_model) #Reporting model test staistics
 tidy(simple_model, conf.int= TRUE) #Unstandardized regression coefficients and Cl
 model_parameters(simple_model, standardize = "refit") #Standardized regression coefficients and Cl
+
+# A multiple regression was conducted to examine whether age and sex predicted pain. The overall model was not significant, F(2, 157) = 1.25, p = 0.29, and explained very little variance in pain (adjusted R² = 0.003). Examination of the regression coefficients showed that neither age (B = -0.084, 95% CI [-0.204, 0.036], β = -0.11, p = 0.169) nor sex (B = -0.437, 95% CI [-1.65, 0.774], β = -0.06, p = 0.477) significantly predicted pain. The intercept was significant (B = 8.83, 95% CI [3.88, 13.8], p < 0.001). Overall, these results indicate that in this sample, age and sex were not significant predictors of pain.
 ```
 
 Create the more complex model based on the results of the model diagnostics. Also, get the results that needs to be reported based on the What to report section.
@@ -294,7 +310,25 @@ summary(modified_complex_model)
 tidy(modified_complex_model, conf.int = TRUE)
 model_parameters(modified_complex_model, standardize= "refit")
 
-y= -0.617 + (-0.0257)*X1 + (-0.0817)*X2 + 0.0199*X3 + 0.0707*X4 + 0.0373*X5 + 0.783*X6
+ # Every variable is numeric, so I can write the regression equation
+modified_df <- modified_df %>%                  
+  mutate(
+    pain = as.numeric(pain),
+    STAI_trait = as.numeric(STAI_trait),
+    pain_cat = as.numeric(pain_cat),
+    mindfulness = as.numeric(mindfulness),
+    cortisol_serum = as.numeric(cortisol_serum)
+  )
+
+y <- -0.10 +
+     (-0.012) * modified_df$pain +
+      0.20 * modified_df$sex_numeric +
+     (-0.04) * modified_df$STAI_trait +
+      0.27 * modified_df$pain_cat +
+     (-0.09) * modified_df$mindfulness +
+      0.35 * modified_df$cortisol_serum
+
+# A multiple regression was conducted to examine whether age, sex, STAI trait, pain catastrophizing, mindfulness, and cortisol serum levels predicted pain. The overall model was significant, F(6, 152) = 13.77, p < 0.001, and explained approximately 33% of the variance in pain (adjusted R² = 0.327). Examination of the regression coefficients indicated that pain catastrophizing (B = 0.085, 95% CI [0.029, 0.141], β = 0.27, p = 0.003) and cortisol serum levels (B = 0.535, 95% CI [0.291, 0.780], β = 0.35, p < 0.001) were significant positive predictors of pain. None of the other predictors, including age, sex, STAI trait, or mindfulness, reached statistical significance. The intercept was not significant (B = 1.978, p = 0.246).
 ```
 
 Compare the two models.
@@ -308,7 +342,7 @@ summary(modified_complex_model)$r.squared
 deltaR2_12 <- summary(modified_complex_model)$r.squared - summary(simple_model)$r.squared   #Checking the change in R2
 deltaR2_12
 
-AIC(simple_model, modified_complex_model)      #Checking AIC and BIC values
+AIC(simple_model, modified_complex_model)      #Checking AIC values
 
 summary(simple_model)$adj.r.squared                 #Checking adjusted R2
 summary(modified_complex_model)$adj.r.squared
@@ -323,4 +357,4 @@ pvalue_LR <- pchisq(LRstat, df = d, lower.tail = FALSE)
 
 LRstat; pvalue_LR
 ```
-A hierarchical regression was conducted to examine predictors of pain. In the simpler model, demographic predictors (age and sex) accounted for 1.6% of the variance in pain (R² = .016). Adding psychological and hormonal predictors (STAI_trait, pain_cat, mindfulness, and cortisol_serum) to the model, the final model accounted for 7.5% of the variance (F(4, 153) = 2.46, p = .048, R² = .075). The AIC value was lower for the more complex model (AIC = 889.99), indicating a better fit. A likelihood ratio test also showed that adding these predictors significantly improved the prediction of pain (χ²(4) = 9.96, p = .041).
+A comparison was conducted between a simpler model including only age and sex and a more complex model including age, sex, STAI trait, pain catastrophizing, mindfulness, and cortisol serum levels in predicting pain. The simpler model explained only a small portion of the variance in pain (R² = 0.088, adjusted R² = 0.076), whereas the more complex model explained substantially more variance (R² = 0.352, adjusted R² = 0.327). Model comparison using the likelihood ratio test confirmed that the complex model was a significantly better fit than the simpler model, LR = 54.40, p < 0.001. This was further supported by the ANOVA F test, F(4, 152) = 15.50, p < 0.001. Information criteria also favored the complex model: the Akaike Information Criterion (AIC) was 577.50 for the simpler model and 531.10 for the complex model, indicating a better fit for the latter despite the additional predictors. The complex model, which included psychological and biological predictors, explained a substantially larger proportion of pain variability in the sample
